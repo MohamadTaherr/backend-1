@@ -1,5 +1,6 @@
 require("dotenv").config()
 const jwt = require("jsonwebtoken")
+const sanitizeHTML = require("sanitize-html")
 const bcrypt = require("bcrypt")
 const cookieParser = require("cookie-parser")
 const express = require("express")
@@ -61,6 +62,75 @@ app.get("/logout", (req, res) =>{
     res.redirect("/")
 })
 
+app.post("/login" , (req, res) => {
+    let errors = []
+
+    if(typeof req.body.username !=="string") req.body.username=""
+     if(typeof req.body.password !=="string") req.body.password=""
+
+     if(req.body.username.trim() =="") errors = [("Invalid username / password.")]
+     if (req.body.password =="")errors = ["Invalid username  / password."]
+        
+      if(errors.length) {
+        return res.render("login", {errors})
+      } 
+      
+      const userInQuestionStatement = db.prepare("SELECT * FROM users WHERE USERNAME = ?")
+      const userInQuestion = userInQuestionStatement.get(req.body.username)
+
+      if(!userInQuestion) {
+        errors= ["Invalid username / password"]
+        return res.render("login", {errors})
+    }
+
+    const matchOrNot = bcrypt.compareSync(req.body.password, userInQuestion.password)
+    if(!matchOrNot) {
+        errors = ["Invalid username / password."]
+        return res.render("login", {errors})
+    }
+
+   const ourTokenValue = jwt.sign({exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, skyColor: "blue", userid:userInQuestion.id, username: userInQuestion.username}, process.env.JWTSECRET)
+      
+       res.cookie("ourSimpleApp", ourTokenValue, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict" ,
+        maxAge: 1000 * 60 * 60 * 24
+       })
+
+       res.redirect("/")
+
+})
+
+function mustBeLoggedIn(req, res, next){
+    if(req.user){
+        return next()
+    }
+    return res.redirect("/")
+}
+
+app.get("/create-post", mustBeLoggedIn, (req, res) =>{
+    res.render("create-post")
+})
+
+function sharedPostValidation(req) {
+    const errors = []
+
+    if(typeof req.body.title !== "string") req.body.title = ""
+    if(typeof req.body.body !== "string") req.body.body = ""
+
+    //trim - sanitize or strip out html
+    req.body.title = sanitizeHTML(req.body.title.trim(), {allowedTags: [], allowedAttributes: {}})
+     req.body.body = sanitizeHTML(req.body.body.trim(), {allowedTags: [], allowedAttributes: {}})  
+  
+
+    return errors
+}
+
+app.post("/create-post",mustBeLoggedIn, (req, res) =>{
+  const errors = sharedPostValidation(req)  
+})
+
 app.post("/register", (req, res) => {
     const errors = []
 
@@ -72,6 +142,11 @@ app.post("/register", (req, res) => {
      if(!req.body.username) errors.push("You must provide a username")
      if(req.body.username && req.body.username.length < 3 )  errors.push("Username must be more than 3 characters")
      if(req.body.username && req.body.username.length > 10 )  errors.push("Username cannot exceed more than 10 characters")
+
+    //check if username esits already
+    const usernameStatement = db.prepare("SELECT * FROM users WHERE username = ?")
+    const usernameCheck = usernameStatement.get(req.body.username)
+    if (usernameCheck) errors.push("Username is already taken")
 
      if(!req.body.password) errors.push("You must provide a Password")
      if(req.body.password && req.body.password.length < 8 )  errors.push("Password must be more than 8 characters")
@@ -102,7 +177,7 @@ app.post("/register", (req, res) => {
         maxAge: 1000 * 60 * 60 * 24
        })
 
-       res.send("Thank you")
+       res.redirect("/")
 
     }) 
 
