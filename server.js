@@ -142,6 +142,19 @@ function sharedPostValidation(req) {
     return errors
 }
 
+app.get("/edit-post/:id", (req,res) => {
+
+    const statement = db.prepare("SELECT * FROM posts WHERE id = ?")
+    const post = statement.get(req.params.id)
+
+if (post.authorid !== req.user.userid) {
+    return res.redirect("/")
+}
+
+res.render("edit-post", {post})
+
+})
+
 app.get("/post/:id", (req, res) =>{
     const statement = db.prepare("SELECT posts.*, users.username FROM posts INNER JOIN users ON posts.authorid = users.id WHERE posts.id= ?")
     const post = statement.get(req.params.id)
