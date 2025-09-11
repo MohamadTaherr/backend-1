@@ -17,6 +17,17 @@ db.prepare(`
     )
     `
      ).run()
+
+     db.prepare(`
+        CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT ,
+        createdDate TEXT, 
+        title STRING NOT NULL,
+        body TEXT NOT NULL,
+        authorid INTEGER,
+        FOREIGN KEY (authorid) REFERENCES users (id) 
+        )
+        `).run()
 })
 
 createTables()
@@ -121,14 +132,29 @@ function sharedPostValidation(req) {
 
     //trim - sanitize or strip out html
     req.body.title = sanitizeHTML(req.body.title.trim(), {allowedTags: [], allowedAttributes: {}})
-     req.body.body = sanitizeHTML(req.body.body.trim(), {allowedTags: [], allowedAttributes: {}})  
-  
+     req.body.body = sanitizeHTML(req.body.body.trim(), {allowedTags: [], allowedAttributes: {}})
+     
+     if (!req.body.title) errors.push("You must provide a title.")
+     if (!req.body.body) errors.push("You must provide content.")  
 
     return errors
 }
 
 app.post("/create-post",mustBeLoggedIn, (req, res) =>{
-  const errors = sharedPostValidation(req)  
+  const errors = sharedPostValidation(req) 
+  
+  if(errors.length) {
+    return res.render("create-post", {errors})
+  }
+
+
+   const ourStatement = db.prepare("INSERT INTO posts(title, body, authorid, createdDate) VALUES (?, ?, ?, ?)")
+   const result = ourStatement.run(req.body.title, req.body.body, req.user.userid, new Date().toISOString())
+
+   const getPostStatement = db.prepare("SELECT * FROM posts WHERE ROWID = ?")
+   const realPost = getPostStatement.get(result.lastInsertRowid)
+
+   res.redirect(`/post/${realPost.id}`)
 })
 
 app.post("/register", (req, res) => {
