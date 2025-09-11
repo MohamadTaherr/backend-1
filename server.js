@@ -1,5 +1,6 @@
 require("dotenv").config()
 const jwt = require("jsonwebtoken")
+const marked = require("marked")
 const sanitizeHTML = require("sanitize-html")
 const bcrypt = require("bcrypt")
 const cookieParser = require("cookie-parser")
@@ -39,7 +40,16 @@ app.set("view engine", "ejs")
 app.use(express.static("public"))
 app.use(cookieParser())
 
-app.use(function(req, res, next){
+app.use(function(req, res, next) {
+   //markdown function
+   res.locals.filterUserHTML = function (content) {
+    return sanitizeHTML(marked.parse(content), {
+        allowedTags: ["p", "br", "ul", "li", "ol", "strong", "bold", "i", "em", "h1", "h2", "h3", "h4", "h5", "h6"],
+        allowedAttributes: {}
+    })
+   }
+   
+   
     res.locals.errors = []
 
     //try to decode incoming cookir
@@ -57,7 +67,7 @@ app.use(function(req, res, next){
 
 app.get("/", (req, res) => {
    if(req.user) {
-    const postsStatement = db.prepare("SELECT * FROM posts WHERE authorid = ?")
+    const postsStatement = db.prepare("SELECT * FROM posts WHERE authorid = ? ORDER BY createdDate DESC")
     const posts = postsStatement.all(req.user.userid)
     return res.render("dashboard", {posts})
    }
