@@ -5,7 +5,12 @@
     <%- include('includes/header') %>
     <main>
      <h2>Welcome to your dashboard</h2>
-     <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit. Dignissimos sapiente quod nisi quasi, similique aliquam rerum, et veniam repellat perferendis porro eos doloremque dolores quidem illo temporibus labore iusto itaque!</p>
+    <ul>
+        <% posts.forEach(post => { %>
+            <li><a href="/post/<%= post.id %>"><%= post.title %></a> on <%= new Date(post.createdDate).getMonth() + 1 %>/<%= new Date(post.createdDate).getDate() %>/<%= new Date(post.createdDate).getFullYear() %></li>
+
+      <%  }) %> 
+    </ul>
 </main>
 
     <%- include('includes/footer') %>

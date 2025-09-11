@@ -57,7 +57,9 @@ app.use(function(req, res, next){
 
 app.get("/", (req, res) => {
    if(req.user) {
-    return res.render("dashboard")
+    const postsStatement = db.prepare("SELECT * FROM posts WHERE authorid = ?")
+    const posts = postsStatement.all(req.user.userid)
+    return res.render("dashboard", {posts})
    }
 
     res.render("homepage")
@@ -139,6 +141,17 @@ function sharedPostValidation(req) {
 
     return errors
 }
+
+app.get("/post/:id", (req, res) =>{
+    const statement = db.prepare("SELECT posts.*, users.username FROM posts INNER JOIN users ON posts.authorid = users.id WHERE posts.id= ?")
+    const post = statement.get(req.params.id)
+
+    if (!post) {
+        return res.redirect("/")
+    }
+
+    res.render("single-post", {post})
+})
 
 app.post("/create-post",mustBeLoggedIn, (req, res) =>{
   const errors = sharedPostValidation(req) 
