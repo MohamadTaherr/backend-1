@@ -4,7 +4,7 @@
 <body>
     <%- include('includes/header') %>
     <main>
-       <form action="/create-post" method="POST">
+       <form action="/edit-post/<%= post.id %>" method="POST">
         <% errors.forEach(error => { %>
             <p class="notice"><%= error %></p>
 

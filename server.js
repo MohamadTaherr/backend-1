@@ -142,17 +142,47 @@ function sharedPostValidation(req) {
     return errors
 }
 
-app.get("/edit-post/:id", (req,res) => {
+app.get("/edit-post/:id", mustBeLoggedIn, (req,res) => {
 
     const statement = db.prepare("SELECT * FROM posts WHERE id = ?")
     const post = statement.get(req.params.id)
+
+    if (!post) {
+        return res.redirect("/")
+    }
 
 if (post.authorid !== req.user.userid) {
     return res.redirect("/")
 }
 
+
+
 res.render("edit-post", {post})
 
+})
+
+app.post("/edit-post/:id", mustBeLoggedIn, (req, res) =>{
+    const statement = db.prepare("SELECT * FROM posts WHERE id = ?")
+    const post = statement.get(req.params.id)
+
+    if (!post) {
+        return res.redirect("/")
+    }
+
+if (post.authorid !== req.user.userid) {
+    return res.redirect("/")
+}
+
+const errors = sharedPostValidation(req)
+
+if (errors.length) {
+    return res.render("edit-post", {errors})
+}
+
+const updateStatement = db.prepare("UPDATE posts SET title = ?, body = ? WHERE id = ?")
+updateStatement.run(req.body.title, req.body.body, req.params.id)
+
+res.redirect(`/post/${req.params.id}`)
 })
 
 app.get("/post/:id", (req, res) =>{
@@ -163,10 +193,12 @@ app.get("/post/:id", (req, res) =>{
         return res.redirect("/")
     }
 
-    res.render("single-post", {post})
+    const isAuthor = post.authorid === req.user.userid
+    
+    res.render("single-post", {post, isAuthor})
 })
 
-app.post("/create-post",mustBeLoggedIn, (req, res) =>{
+app.post("/create-post", mustBeLoggedIn, (req, res) =>{
   const errors = sharedPostValidation(req) 
   
   if(errors.length) {
@@ -181,6 +213,24 @@ app.post("/create-post",mustBeLoggedIn, (req, res) =>{
    const realPost = getPostStatement.get(result.lastInsertRowid)
 
    res.redirect(`/post/${realPost.id}`)
+})
+
+app.post("/delete-post/:id", mustBeLoggedIn, (req, res) => {
+     const statement = db.prepare("SELECT * FROM posts WHERE id = ?")
+    const post = statement.get(req.params.id)
+
+    if (!post) {
+        return res.redirect("/")
+    }
+
+if (post.authorid !== req.user.userid) {
+    return res.redirect("/")
+}
+
+const deleteStatement = db.prepare("DELETE FROM posts WHERE id = ?")
+deleteStatement.run(req.params.id)
+
+res.redirect("/")
 })
 
 app.post("/register", (req, res) => {

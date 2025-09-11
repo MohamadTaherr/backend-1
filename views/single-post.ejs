@@ -14,12 +14,14 @@
         </div>
       </article>
 
+      <% if(isAuthor) { %>
+         <a href="/edit-post/<%= post.id %>" class="button">Edit Post</a>
 
-      <a href="/edit-post/<%= post.id %>" class="button">Edit Post</a>
-
-      <form style="display: inline;" action="/delete-post/<%+ post.id %>" method="POST">
+      <form style="display: inline;" action="/delete-post/<%= post.id %>" method="POST">
         <button>Delete Post</button>
-      </form>  
+      </form>
+      <% } %>
+        
       
     </main>
 
